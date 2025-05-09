@@ -79,7 +79,7 @@ resource "aws_instance" "app" {
               yum install -y python3 python3-pip git
               pip3 install --upgrade pip
               cd /home/ec2-user
-              git clone https://github.com/yourusername/layers_backend.git
+              git clone https://github.com/BlackPrintTechnologies/blackprint-layers
               cd layers_backend
               pip3 install -r requirements.txt
               # Add your application startup commands here
