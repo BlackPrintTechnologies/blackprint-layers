@@ -82,7 +82,13 @@ resource "aws_instance" "app" {
               git clone https://github.com/BlackPrintTechnologies/blackprint-layers
               cd layers_backend
               pip3 install -r requirements.txt
-              # Add your application startup commands here
+              cat <<EOT > app.env
+              SECRET_KEY=blackprint@123
+              DB_USERNAME=postgres
+              # ... all other keys from app.json ...
+              EOT
+              # Start the FastAPI app
+              nohup uvicorn main:app --host 0.0.0.0 --port 80 &
               EOF
 
   tags = {
