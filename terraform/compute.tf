@@ -1,11 +1,16 @@
-# Get the latest Amazon Linux 2 AMI
-data "aws_ami" "amazon_linux_2" {
+# Get the latest Ubuntu 20.04 AMI
+data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["amazon"]
+  owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 }
 
@@ -52,6 +57,13 @@ resource "aws_security_group" "app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -66,8 +78,13 @@ resource "aws_security_group" "app" {
 
 # EC2 Instance
 resource "aws_instance" "app" {
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = var.instance_type
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t2.medium"
+  #to set storage to 30gb
+  root_block_device {
+    volume_size = 30  # set this to 30 GB
+    volume_type = "gp2"
+  }
 
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
@@ -75,23 +92,20 @@ resource "aws_instance" "app" {
 
   user_data = <<-EOF
               #!/bin/bash
-              yum update -y
-              yum install -y python3 python3-pip git
+              apt update -y
+              apt install -y python3 python3-pip git
               pip3 install --upgrade pip
-              cd /home/ec2-user
+              cd /home/ubuntu
               git clone https://github.com/BlackPrintTechnologies/blackprint-layers
-              cd layers_backend
+              cd blackprint-layers/layers_backend
               pip3 install -r requirements.txt
-              cat <<EOT > app.env
-              SECRET_KEY=blackprint@123
-              DB_USERNAME=postgres
-              # ... all other keys from app.json ...
-              EOT
-              # Start the FastAPI app
+              # Start the FastAPI app (will fail until app.json is added manually)
               nohup uvicorn main:app --host 0.0.0.0 --port 80 &
               EOF
+
+  key_name = "my-key"
 
   tags = {
     Name = "${var.app_name}-instance"
   }
-} 
+}
