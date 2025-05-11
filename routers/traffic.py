@@ -3,12 +3,14 @@ from sqlalchemy.orm import Session
 from database import get_db
 from schemas.response import Response
 from services.traffic import TrafficService
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
+from starlette.concurrency import run_in_threadpool
+
 router = APIRouter()
 traffic_service = TrafficService()
 
 @router.get("/traffic/{fid}", response_model=Response)
-def get_mobility_data_within_buffer(
+async def get_mobility_data_within_buffer(
     fid: int,
     radius: str = Query(..., regex="^(500|1000|5)$", description="Radius in meters (500, 1000) or front of store (5)"),
     db: Session = Depends(get_db)
@@ -24,9 +26,9 @@ def get_mobility_data_within_buffer(
                 detail=f"Invalid radius value: {radius}. Must be one of: 500, 1000, 5"
             )
         print("just before the response")  
-        result = traffic_service.get_mobility_data_within_buffer(fid, clean_radius, db)
+        result = await run_in_threadpool(traffic_service.get_mobility_data_within_buffer, fid, clean_radius, db)
         # response_data = Response.success(data={"response": result})
-        return JSONResponse(content={"response": result}, status_code=200)
+        return ORJSONResponse(content={"response": result}, status_code=200)
     except HTTPException:
         raise
     except Exception as e:
