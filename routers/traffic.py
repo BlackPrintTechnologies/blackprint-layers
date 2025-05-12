@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from schemas.response import Response
 from services.traffic import TrafficService
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 router = APIRouter()
@@ -28,7 +28,7 @@ async def get_mobility_data_within_buffer(
         print("just before the response")  
         result = await run_in_threadpool(traffic_service.get_mobility_data_within_buffer, fid, clean_radius, db)
         # response_data = Response.success(data={"response": result})
-        return ORJSONResponse(content={"response": result}, status_code=200)
+        return JSONResponse(content={"response": result}, status_code=200)
     except HTTPException:
         raise
     except Exception as e:
