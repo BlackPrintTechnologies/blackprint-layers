@@ -64,6 +64,13 @@ resource "aws_security_group" "app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -107,5 +114,32 @@ resource "aws_instance" "app" {
 
   tags = {
     Name = "${var.app_name}-instance"
+  }
+}
+
+resource "aws_instance" "blackprint_backend" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = var.instance_type
+  root_block_device {
+    volume_size = 30  # 30 GB
+    volume_type = "gp2"
+  }
+  associate_public_ip_address = true
+  iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
+  vpc_security_group_ids      = [aws_security_group.app.id]
+  user_data = <<-EOF
+              #!/bin/bash
+              apt update -y
+              apt install -y python3 python3-pip git
+              pip3 install --upgrade pip
+              cd /home/ubuntu
+              git clone https://github.com/BlackPrintTechnologies/blackprint-backend
+              cd blackprint-backend
+              pip3 install -r requirements.txt || true
+              # nohup uvicorn app:app --host 0.0.0.0 --port 5000 &
+              EOF
+  key_name = "my-key"
+  tags = {
+    Name = "blackprint-staging-instance"
   }
 }
